@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Class Recorder — MP4 to Telegram</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #5b6af0, #7c3aed);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo-text h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .logo-text p {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .drop-zone {
+      border: 2px dashed #2d3148;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #12141e;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #5b6af0;
+      background: #16192a;
+    }
+
+    .drop-zone.dragover {
+      transform: scale(1.01);
+    }
+
+    .drop-icon {
+      font-size: 44px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .drop-zone h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .drop-zone p {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .file-preview {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: #12141e;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 16px;
+    }
+
+    .file-preview.visible { display: flex; }
+
+    .file-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-size {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .btn-clear {
+      background: none;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-clear:hover { color: #e2e8f0; }
+
+    .btn-send {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      background: linear-gradient(135deg, #5b6af0, #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-send:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn-send:active:not(:disabled) { transform: translateY(0); }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .progress-wrap {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .progress-wrap.visible { display: block; }
+
+    .progress-label {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-bar-bg {
+      background: #1e2130;
+      border-radius: 100px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #5b6af0, #7c3aed);
+      width: 0%;
+      transition: width 0.3s ease;
+      animation: shimmer 1.5s infinite;
+      background-size: 200% 100%;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .status-box {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-box.visible { display: flex; }
+    .status-box.success { background: #0d2e1a; border: 1px solid #166534; color: #4ade80; }
+    .status-box.error   { background: #2e0d0d; border: 1px solid #991b1b; color: #f87171; }
+
+    .health-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .health-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #64748b;
+      background: #12141e;
+      border: 1px solid #2d3148;
+      border-radius: 100px;
+      padding: 5px 12px;
+    }
+
+    .health-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #64748b;
+      flex-shrink: 0;
+    }
+
+    .health-dot.ok { background: #4ade80; }
+    .health-dot.bad { background: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">🎙️</div>
+      <div class="logo-text">
+        <h1>Class Recorder</h1>
+        <p>Drop a recording. It goes straight to Telegram.</p>
+      </div>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".mp4,video/mp4" />
+      <span class="drop-icon">📁</span>
+      <h2>Drag your MP4 here</h2>
+      <p>or click to browse</p>
+    </div>
+
+    <div class="file-preview" id="filePreview">
+      <span class="file-icon">🎬</span>
+      <div class="file-info">
+        <div class="file-name" id="fileName">—</div>
+        <div class="file-size" id="fileSize">—</div>
+      </div>
+      <button class="btn-clear" id="btnClear" title="Remove file">✕</button>
+    </div>
+
+    <button class="btn-send" id="btnSend" disabled>
+      <span id="btnLabel">Convert & Send to Telegram</span>
+    </button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressText">Uploading…</span>
+        <span id="progressPct">—</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <div class="status-box" id="statusBox">
+      <span id="statusIcon">✅</span>
+      <span id="statusMsg"></span>
+    </div>
+
+    <div class="health-bar" id="healthBar"></div>
+  </div>
+
+  <script>
+    // Works locally and when deployed (same origin)
+    const SERVER = window.location.origin;
+    let selectedFile = null;
+
+    const dropZone    = document.getElementById("dropZone");
+    const fileInput   = document.getElementById("fileInput");
+    const filePreview = document.getElementById("filePreview");
+    const fileName    = document.getElementById("fileName");
+    const fileSize    = document.getElementById("fileSize");
+    const btnClear    = document.getElementById("btnClear");
+    const btnSend     = document.getElementById("btnSend");
+    const btnLabel    = document.getElementById("btnLabel");
+    const progressWrap = document.getElementById("progressWrap");
+    const progressText = document.getElementById("progressText");
+    const progressPct  = document.getElementById("progressPct");
+    const progressFill = document.getElementById("progressFill");
+    const statusBox   = document.getElementById("statusBox");
+    const statusIcon  = document.getElementById("statusIcon");
+    const statusMsg   = document.getElementById("statusMsg");
+    const healthBar   = document.getElementById("healthBar");
+
+    function formatBytes(bytes) {
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function setFile(file) {
+      if (!file || !file.name.toLowerCase().endsWith(".mp4")) {
+        showStatus("error", "Only .mp4 files are accepted.");
+        return;
+      }
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = formatBytes(file.size);
+      filePreview.classList.add("visible");
+      btnSend.disabled = false;
+      hideStatus();
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      fileInput.value = "";
+      filePreview.classList.remove("visible");
+      btnSend.disabled = true;
+      hideStatus();
+      resetProgress();
+    }
+
+    function showStatus(type, msg) {
+      statusBox.className = "status-box visible " + type;
+      statusIcon.textContent = type === "success" ? "✅" : "❌";
+      statusMsg.textContent = msg;
+    }
+
+    function hideStatus() {
+      statusBox.className = "status-box";
+    }
+
+    function resetProgress() {
+      progressWrap.classList.remove("visible");
+      progressFill.style.width = "0%";
+    }
+
+    function setProgress(pct, label) {
+      progressWrap.classList.add("visible");
+      progressFill.style.width = pct + "%";
+      progressText.textContent = label;
+      progressPct.textContent = pct < 100 ? pct + "%" : "";
+    }
+
+    // Drag events
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file) setFile(file);
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    btnClear.addEventListener("click", clearFile);
+
+    btnSend.addEventListener("click", async () => {
+      if (!selectedFile) return;
+
+      btnSend.disabled = true;
+      btnLabel.textContent = "Working…";
+      hideStatus();
+      setProgress(10, "Uploading file…");
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${SERVER}/convert`);
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 40) + 10; // 10–50%
+          setProgress(pct, "Uploading…");
+        }
+      });
+
+      xhr.onload = () => {
+        let data;
+        try { data = JSON.parse(xhr.responseText); }
+        catch { data = { success: false, error: "Unexpected server response." }; }
+
+        if (data.success) {
+          setProgress(100, "Done!");
+          showStatus("success", data.message);
+        } else {
+          resetProgress();
+          showStatus("error", data.error || "Something went wrong.");
+        }
+
+        btnSend.disabled = false;
+        btnLabel.textContent = "Convert & Send to Telegram";
+      };
+
+      xhr.onerror = () => {
+        resetProgress();
+        showStatus("error", "Could not reach the server. Is it running?");
+        btnSend.disabled = false;
+        btnLabel.textContent = "Convert & Send to Telegram";
+      };
+
+      // Fake conversion progress (server-side, no real progress stream)
+      let fakePct = 50;
+      const fakeTimer = setInterval(() => {
+        if (fakePct < 90) {
+          fakePct += Math.random() * 4;
+          setProgress(Math.round(fakePct), "Converting to MP3…");
+        }
+      }, 800);
+
+      xhr.addEventListener("loadend", () => clearInterval(fakeTimer));
+
+      xhr.send(formData);
+    });
+
+    // Health check on load
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${SERVER}/health`, { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+
+        const chips = [
+          { label: "ffmpeg", ok: data.ffmpeg === "found", text: data.ffmpeg === "found" ? "ffmpeg ready" : "ffmpeg missing" },
+          { label: "telegram", ok: data.credentials === "set", text: data.credentials === "set" ? "Telegram ready" : "Credentials missing" },
+        ];
+
+        healthBar.innerHTML = chips.map(c => `
+          <div class="health-chip">
+            <div class="health-dot ${c.ok ? "ok" : "bad"}"></div>
+            ${c.text}
+          </div>
+        `).join("");
+      } catch {
+        healthBar.innerHTML = `<div class="health-chip"><div class="health-dot bad"></div>Server offline</div>`;
+      }
+    }
+
+    checkHealth();
+  </script>
+</body>
+</html>
