@@ -47,10 +47,11 @@ def convert_to_mp3(mp4_path: str, mp3_path: str) -> bool:
 def send_to_telegram(mp3_path: str, filename: str) -> dict:
     """Send the MP3 file to the configured Telegram channel."""
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendAudio"
+    caption = "Assalamu alaikum, here is the last class recording for your reference!"
     with open(mp3_path, "rb") as audio_file:
         response = requests.post(
             url,
-            data={"chat_id": CHANNEL_ID},
+            data={"chat_id": CHANNEL_ID, "caption": caption},
             files={"audio": (filename, audio_file, "audio/mpeg")},
             timeout=300,
         )
@@ -66,6 +67,10 @@ def convert():
     if not file.filename.lower().endswith(".mp4"):
         return jsonify({"success": False, "error": "Only .mp4 files are accepted."}), 400
 
+    class_number = request.form.get("class_number", "").strip()
+    if not class_number:
+        return jsonify({"success": False, "error": "Class number is required."}), 400
+
     if not BOT_TOKEN or not CHANNEL_ID:
         return jsonify({
             "success": False,
@@ -73,8 +78,7 @@ def convert():
         }), 500
 
     # Build file paths
-    base_name = os.path.splitext(file.filename)[0]
-    mp3_filename = base_name + ".mp3"
+    mp3_filename = f"Class {class_number} - Dawah Built in Creed.mp3"
     mp4_path = os.path.join(UPLOAD_DIR, file.filename)
     mp3_path = os.path.join(UPLOAD_DIR, mp3_filename)
 
@@ -126,8 +130,8 @@ def health():
 
 
 if __name__ == "__main__":
-    print("━" * 50)
-    print("  MP4 → MP3 Class Recorder")
+    print("=" * 50)
+    print("  MP4 -> MP3 Class Recorder")
     print("  Open http://localhost:5050 in your browser")
-    print("━" * 50)
+    print("=" * 50)
     app.run(host="0.0.0.0", port=5050, debug=False)

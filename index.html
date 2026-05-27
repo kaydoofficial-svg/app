@@ -261,6 +261,41 @@
 
     .health-dot.ok { background: #4ade80; }
     .health-dot.bad { background: #f87171; }
+
+    .class-number-wrap {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .class-number-wrap.visible { display: block; }
+
+    .class-number-wrap label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .class-number-wrap input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #12141e;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .class-number-wrap input:focus {
+      border-color: #5b6af0;
+    }
+
+    .class-number-wrap input::placeholder {
+      color: #475569;
+    }
   </style>
 </head>
 <body>
@@ -287,6 +322,11 @@
         <div class="file-size" id="fileSize">—</div>
       </div>
       <button class="btn-clear" id="btnClear" title="Remove file">✕</button>
+    </div>
+
+    <div class="class-number-wrap" id="classNumberWrap">
+      <label for="classNumber">Class number</label>
+      <input type="number" id="classNumber" min="1" placeholder="e.g. 5" />
     </div>
 
     <button class="btn-send" id="btnSend" disabled>
@@ -331,7 +371,9 @@
     const statusBox   = document.getElementById("statusBox");
     const statusIcon  = document.getElementById("statusIcon");
     const statusMsg   = document.getElementById("statusMsg");
-    const healthBar   = document.getElementById("healthBar");
+    const healthBar       = document.getElementById("healthBar");
+    const classNumberWrap = document.getElementById("classNumberWrap");
+    const classNumber     = document.getElementById("classNumber");
 
     function formatBytes(bytes) {
       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -347,7 +389,9 @@
       fileName.textContent = file.name;
       fileSize.textContent = formatBytes(file.size);
       filePreview.classList.add("visible");
-      btnSend.disabled = false;
+      classNumberWrap.classList.add("visible");
+      classNumber.focus();
+      updateSendButton();
       hideStatus();
     }
 
@@ -355,6 +399,8 @@
       selectedFile = null;
       fileInput.value = "";
       filePreview.classList.remove("visible");
+      classNumberWrap.classList.remove("visible");
+      classNumber.value = "";
       btnSend.disabled = true;
       hideStatus();
       resetProgress();
@@ -403,6 +449,12 @@
       if (fileInput.files[0]) setFile(fileInput.files[0]);
     });
 
+    function updateSendButton() {
+      btnSend.disabled = !selectedFile || !classNumber.value;
+    }
+
+    classNumber.addEventListener("input", updateSendButton);
+
     btnClear.addEventListener("click", clearFile);
 
     btnSend.addEventListener("click", async () => {
@@ -415,6 +467,7 @@
 
       const formData = new FormData();
       formData.append("file", selectedFile);
+      formData.append("class_number", classNumber.value);
 
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${SERVER}/convert`);
