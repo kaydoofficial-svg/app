@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py .
 COPY index.html .
+COPY login.html .
 
 # Serve index.html via Flask too
 RUN pip install --no-cache-dir flask

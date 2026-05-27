@@ -1,19 +1,23 @@
 import os
 import subprocess
 import requests
-from flask import Flask, request, jsonify, send_from_directory
+from functools import wraps
+from flask import Flask, request, jsonify, send_from_directory, session, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 import tempfile
 import shutil
+import secrets
 
 load_dotenv("config.env")
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
 CORS(app)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
+APP_PASSWORD = os.getenv("APP_PASSWORD", "")
 
 UPLOAD_DIR = tempfile.mkdtemp()
 
@@ -58,7 +62,34 @@ def send_to_telegram(mp3_path: str, filename: str) -> dict:
     return response.json()
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("authenticated"):
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if password == APP_PASSWORD:
+            session["authenticated"] = True
+            return redirect("/")
+        return send_from_directory(".", "login.html")
+    return send_from_directory(".", "login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+
 @app.route("/convert", methods=["POST"])
+@login_required
 def convert():
     if "file" not in request.files:
         return jsonify({"success": False, "error": "No file uploaded."}), 400
@@ -115,6 +146,7 @@ def convert():
 
 
 @app.route("/")
+@login_required
 def index():
     return send_from_directory(".", "index.html")
 
